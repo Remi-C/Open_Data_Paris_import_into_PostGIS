@@ -7,8 +7,11 @@ Confidential
 This function will put in relation a table containing all the different info value and all the data table containing an info columns
 WARNING : prototype : non tested or proofed.
 */
-DROP FUNCTION IF EXISTS odparis.rc_create_foreign_keys_constraint_on_all_info_columns(text,text);--remove the function before re-creating it : act as a security versus function-type change
-CREATE OR REPLACE FUNCTION odparis.rc_create_foreign_keys_constraint_on_all_info_columns(schema_name text,reference_table_name text) RETURNS boolean
+
+
+
+DROP FUNCTION IF EXISTS  rc_create_foreign_keys_constraint_on_all_info_columns(text,text);--remove the function before re-creating it : act as a security versus function-type change
+CREATE OR REPLACE FUNCTION  rc_create_foreign_keys_constraint_on_all_info_columns(schema_name text,reference_table_name text) RETURNS boolean
 AS $$
 DECLARE
 	the_row record;
@@ -47,7 +50,7 @@ BEGIN
 		for_query := 'SELECT * 
 			FROM geometry_columns 
 			WHERE f_table_schema = '||quote_literal(schema_name) ||'
-				AND odparis.rc_column_exists('|| quote_literal(schema_name)||',quote_ident(f_table_name),''info'') = TRUE
+				AND rc_column_exists('|| quote_literal(schema_name)||',quote_ident(f_table_name),''info'') = TRUE
 			ORDER BY f_table_name ASC ;';
 
 		
@@ -59,7 +62,7 @@ BEGIN
 			RAISE NOTICE 'working on : %.%',schema_name,the_row.f_table_name;
 
 			the_query := '
-				SELECT odparis.rc_create_foreign_keys_on_info_columns('||quote_literal(schema_name)||','||quote_literal(the_row.f_table_name)||','|| quote_literal(reference_table_name) ||');
+				SELECT rc_create_foreign_keys_on_info_columns('||quote_literal(schema_name)||','||quote_literal(the_row.f_table_name)||','|| quote_literal(reference_table_name) ||');
 				' ;
 			EXECUTE the_query ;
 			END;
@@ -68,20 +71,21 @@ BEGIN
 	END;
 RETURN TRUE;
 END;
+/*exemple use-case :*/
+-- SELECT  rc_create_foreign_keys_constraint_on_all_info_columns('odparis_corrected','odparis_corrected.nomenclature');
+-- SELECT *
+-- FROM odparis_reworked.nomenclature
+
 $$LANGUAGE plpgsql; 
 
-/*exemple use-case :*/
-SELECT odparis.rc_create_foreign_keys_constraint_on_all_info_columns('odparis_reworked','odparis_reworked.nomenclature');
-SELECT *
-FROM odparis_reworked.nomenclature
 
 
 /*
 *this function create a foreign key constraint based on info values
 */
 
-DROP FUNCTION IF EXISTS odparis.rc_create_foreign_keys_on_info_columns(text,text,text);--remove the function before re-creating it : act as a security versus function-type change
-CREATE OR REPLACE FUNCTION odparis.rc_create_foreign_keys_on_info_columns(schema_name text,table_name text,reference_table_name text) RETURNS boolean
+DROP FUNCTION IF EXISTS  rc_create_foreign_keys_on_info_columns(text,text,text);--remove the function before re-creating it : act as a security versus function-type change
+CREATE OR REPLACE FUNCTION  rc_create_foreign_keys_on_info_columns(schema_name text,table_name text,reference_table_name text) RETURNS boolean
 AS $$
 DECLARE
     row record;
@@ -103,7 +107,7 @@ BEGIN
 		WHEN undefined_column
 		THEN RAISE NOTICE 'this table %.% has no __info__ column, skipping foreign key adding',schema_name,table_name;
 		WHEN duplicate_column OR ambiguous_column
-		THEN RAISE NOTICE 'this table %.% has an amiguous column __info__ or to many of theim, skipping foreign key adding',schema_name,table_name;
+		THEN RAISE NOTICE 'this table %.% has an ambiguous column __info__ or to many of theim, skipping foreign key adding',schema_name,table_name;
 		WHEN duplicate_object
 		THEN RAISE NOTICE 'this table %.% as already a foreign key constraint defined on info, skipping adding foreign key',schema_name,table_name;
 	RETURN FALSE;
@@ -112,9 +116,10 @@ BEGIN
 	/*END LOOP;*/
 RETURN TRUE;
 END;
-$$LANGUAGE plpgsql; 
 
 /*exemple use-case :*/
---SELECT odparis.rc_create_foreign_keys_on_info_columns('odparis_test','assainissement','odparis_test.test_info_libelle');
+--SELECT rc_create_foreign_keys_on_info_columns('odparis_test','assainissement','odparis_test.test_info_libelle');
+
+$$LANGUAGE plpgsql; 
 
 

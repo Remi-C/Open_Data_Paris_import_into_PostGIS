@@ -256,6 +256,8 @@ this function has some control to execute only part of the correction process, s
 	--this part cluster phisically the table on disk to be organized following the info index.
 		--this will speed up queries based on info.
 
+11. Recreating the public key constraint on gid table field
+	--we want to add a publi key constraint because it is better to have it explicited.
 
 
 WARNING :prototype only, not properly tested and/or proofed
@@ -503,10 +505,14 @@ $$
 DECLARE
 	schema_name text = $1;
 	query text :='titi';
+	for_query TEXT:='';
 	table_name text := 'toto.toto';
 	table_name_qualified text :='schema.table_name';
 	table_name_random text := 'efpern';
 	temp_boolean boolean := FALSE ;
+	the_row record;
+	the_row_2 record;
+	temp_int INT;
 
 	/************************/
 	--execution control, set to true to execute
@@ -520,6 +526,7 @@ DECLARE
 	creating_info_indexes boolean  	:= controle_d_execution[8];   	--	creating indexes on info column , safe in any case, may be long
 	creating_gist_indexes boolean	:= controle_d_execution[9];   	--	creating indexes on geom column, safe in any case, may be long
 	clustering_on_info boolean	:= controle_d_execution[10];   	--	clustering tables using info index, safe, may be very long
+	creating_public_key_constraint  boolean	:= controle_d_execution[11];  
 	
 	/************************/
 	
@@ -1308,8 +1315,61 @@ BEGIN
 		END;
 	END IF;
 
+	if(TRUE = creating_public_key_constraint)
+		THEN
+		BEGIN
+		--this part create public key constraint on gid
+		RAISE NOTICE '	___begining constraining gid to public key___';
+
+
+		for_query := 'SELECT DISTINCT ON (f_table_schema,f_table_name) * 
+			FROM geometry_columns
+			WHERE f_table_schema = '||quote_literal(schema_name)||'
+				AND rc_column_exists('|| quote_literal(schema_name)||',quote_ident(f_table_name),''gid'') = TRUE
+ 
+			ORDER BY f_table_name ASC ;';
+
+		
+	
+		FOR the_row IN EXECUTE for_query
+			
+		LOOP --loop on all table with gid column in the schema
+			BEGIN
+			--RAISE NOTICE 'working on : %.%',schema_name,the_row.f_table_name;
+		
+			EXECUTE 'SELECT count(*) AS the_count
+					FROM pg_index, pg_class, pg_attribute, pg_namespace 
+					WHERE 
+					  pg_class.oid = ('''||quote_ident(schema_name)||'.'||quote_ident(the_row.f_table_name)||''')::regclass AND 
+					  indrelid = pg_class.oid AND 
+					  nspname = '||quote_literal(schema_name)||' AND 
+					  pg_class.relnamespace = pg_namespace.oid AND 
+					  pg_attribute.attrelid = pg_class.oid AND 
+					  pg_attribute.attnum = any(pg_index.indkey)
+					 AND indisprimary
+					 AND attname ILIKE ''gid'' ;'INTO temp_int ;
+
+
+			--RAISE NOTICE 'the temp_int : %',temp_int;
+			IF (temp_int>0  ) THEN 
+			--do nothing, there already is aa public key on gid.
+			ELSE 
+
+			query := format('ALTER TABLE %I.%I ADD PRIMARY KEY (gid);', schema_name,the_row.f_table_name);
+			raise notice 'executed query :%',query;
+			EXECUTE query;
+			END IF ;
+			
+			END;
+		END LOOP;--end of query construction
+		END;
+	END IF;
+
+	
 RETURN TRUE;
 END;
+
+
 
 
 /*exemple of use*/
@@ -1328,58 +1388,65 @@ END;
 
 --1. Delete useless table 
 	BEGIN;
-		SELECT rc_filtering_raw_odparis('odparis_corrected',ARRAY[TRUE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE]);
+		SELECT rc_filtering_raw_odparis('odparis_corrected',ARRAY[TRUE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE,FALSE]);
 	COMMIT;
 	END;
 
 --2. Rename tables 	
 	BEGIN;
-		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,TRUE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE]);
+		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,TRUE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE,FALSE]);
 	COMMIT;
 	END;
 
 --3. Editing of complexe table 
 	BEGIN;
-		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, TRUE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE]);
+		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, TRUE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE,FALSE]);
 	COMMIT;
 	END;
 	
 --4. Dealing with null and 'Objet sans identification particulière pour ce niveau' values 
 	BEGIN;
-		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,TRUE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE]);
+		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,TRUE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE,FALSE]);
 	COMMIT;END;
 	
 --5. Changing the data type of 'libelle' and 'info' 
 	BEGIN;
-		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, TRUE,FALSE, FALSE,FALSE, FALSE,FALSE]);
+		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, TRUE,FALSE, FALSE,FALSE, FALSE,FALSE,FALSE]);
 	COMMIT;END;
 	
 --6. Fusinning tables with close contents 
 	BEGIN;
-		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, FALSE,TRUE, FALSE,FALSE, FALSE,FALSE]);
+		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, FALSE,TRUE, FALSE,FALSE, FALSE,FALSE,FALSE]);
 	COMMIT;END;
 
 --7. Changing info nomenclatura to add the table name as a prefixe except to info already prefixed (like BOR_UNK or DDB_UNK)
 	BEGIN;
-		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, TRUE,FALSE, FALSE,FALSE]);
+		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, TRUE,FALSE, FALSE,FALSE,FALSE]);
 	COMMIT;END;
 	
 --8. Creating Binary Tree indexes on the info columns 
 	BEGIN;
-		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,TRUE, FALSE,FALSE]);
+		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,TRUE, FALSE,FALSE,FALSE]);
 	COMMIT;END;
 
--------OPTIONAL---------
+
 --9. Creating Rectangle Tree indexes on the geom info 
 	BEGIN;
-		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, TRUE,FALSE]);
+		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, TRUE,FALSE,FALSE]);
 	COMMIT;END;
 
 -------OPTIONAL---------
 --10. Clustering physically the tables based on the index on info. 
 	BEGIN;
-		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,TRUE]);
+		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,TRUE,FALSE]);
+	COMMIT;	END;
+
+-------OPTIONAL---------
+--11. creating public key ocnstraint on gid column
+	BEGIN;
+		SELECT rc_filtering_raw_odparis('odparis_corrected'::Text,ARRAY[FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE, FALSE,FALSE,TRUE]);
 	COMMIT;	END;
 */
 
 $$LANGUAGE plpgsql;
+
