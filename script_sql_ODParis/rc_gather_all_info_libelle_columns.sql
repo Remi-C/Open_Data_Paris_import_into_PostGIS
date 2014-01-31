@@ -45,7 +45,7 @@ BEGIN
 	
 		the_query :=
 			'
-			SELECT DISTINCT info,libelle FROM rc_gather_info_libelle_columns('||quote_literal(schema_name)||','||quote_literal(the_row_before.f_table_name)||'::Text)
+			SELECT DISTINCT source_table, info,libelle FROM rc_gather_info_libelle_columns('||quote_literal(schema_name)||','||quote_literal(the_row_before.f_table_name)||'::Text)
 			
 			' ;
 
@@ -68,7 +68,7 @@ BEGIN
 				'('|| the_query || ')
 				UNION ALL
 				(
-					SELECT DISTINCT info,libelle FROM rc_gather_info_libelle_columns('||quote_literal(schema_name)||','||quote_literal(the_row.f_table_name)||')
+					SELECT DISTINCT source_table,info,libelle FROM rc_gather_info_libelle_columns('||quote_literal(schema_name)||','||quote_literal(the_row.f_table_name)||')
 				)
 				' ;
 			END;
@@ -84,7 +84,7 @@ END;
 $$LANGUAGE plpgsql; 
 
 /*exemple use-case :*/
---SELECT * FROM rc_gather_all_info_libelle_columns('odparis_test');
+--SELECT * FROM rc_gather_all_info_libelle_columns('odparis_corrected');
 
 
 
@@ -119,6 +119,6 @@ END;
 $$LANGUAGE plpgsql; 
 
 /*exemple use-case :*/
---SELECT * FROM rc_gather_info_libelle_columns('odparis_reworked','detail_de_bati');
+--SELECT * FROM rc_gather_info_libelle_columns('odparis_corrected','detail_de_bati');
 
 
