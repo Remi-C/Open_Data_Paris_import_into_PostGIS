@@ -35,7 +35,7 @@
 		declare shp2pgsql_command="shp2pgsql -d -g geom -D -I -N insert";
 		
 	#the postgres schema name for where to write table in database, it should exists !
-		declare postgres_schema="odparis";
+		declare postgres_schema="odparis_corrected";
 ########################
 		
 		
