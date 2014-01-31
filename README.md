@@ -23,6 +23,7 @@ The script can be configured by setting the variable at the begginning
  * bash
  * postgres
  * postgis
+ * shp2pgsql in you path
  * zip files from [Open Data Paris](http://opendata.paris.fr/opendata/) (shapefile =  4 files per layer)
  * a postgres user to connect to database via socket (no password, database need to be configured)
 
