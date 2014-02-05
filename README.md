@@ -42,7 +42,7 @@ this data will be
  * postgres
  * postgis
  * shp2pgsql in you path
- * zip files from [Open Data Paris](http://opendata.paris.fr/opendata/) (shapefile =  4 files per layer)
+ * zip files from [Open Data Paris](http://opendata.paris.fr/opendata/) (shapefile =  4 files per layer) 
  * a postgres user to connect to database via socket (no password, database need to be configured)
 
  * the french IGN SRID into postgis, see [how to import it here](https://github.com/Remi-C/IGN_spatial_ref_for_PostGIS)
@@ -59,7 +59,8 @@ this data will be
 
  * another function rc_create_index_on_all_geom_column_in_schema, found in [this repo with utilities for Postgres Postgis, Postgis Topology and PointCloud](https://github.com/Remi-C/PPPP_utilities/tree/master/postgis)
  
-
+ * data required : (see [here](https://github.com/Remi-C/Open_Data_Paris_import_into_PostGIS/wiki/list-of-Open-Data-Paris-zip-files-required) for the list of required data to be cleaned)
+ * 
 ###relation reconstruction###
 
  * the script is 
